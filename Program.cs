@@ -80,6 +80,13 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// Auto migrate on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
+
 app.UseAuthentication(); // ← WAJIB ada sebelum UseAuthorization
 app.UseAuthorization();
 
