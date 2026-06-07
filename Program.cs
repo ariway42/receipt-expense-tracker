@@ -11,25 +11,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── MVC ───────────────────────────────────────────────────────────────────────
 // Global [Authorize] — semua page butuh login kecuali yang [AllowAnonymous]
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
-});
+//builder.Services.AddControllersWithViews(options =>
+//{
+//    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
+//});
 
-// ── Database ──────────────────────────────────────────────────────────────────
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//// ── Database ──────────────────────────────────────────────────────────────────
+////builder.Services.AddDbContext<ApplicationDbContext>(options =>
+////    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-if (builder.Environment.IsDevelopment())
-{
+//if (builder.Environment.IsDevelopment())
+//{
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//}
+//else
+//{
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+//}
+
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-else
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-}
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Identity ──────────────────────────────────────────────────────────────────
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
