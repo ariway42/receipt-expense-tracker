@@ -154,13 +154,15 @@
             if (file && file.type.startsWith('image/')) handleFile(file);
         });
 
-        dropZone.addEventListener('click', (e) => {
-            if (!e.target.closest('#previewContainer') && !e.target.closest('#processingIndicator')) {
+               dropZone.addEventListener('click', (e) => {
+            if (!e.target.closest('#previewContainer') &&
+                !e.target.closest('#processingIndicator') &&
+                !e.target.closest('#actionButtons')) {
                 fileInput.click();
             }
         });
-        browseBtn.addEventListener('click', () => fileInput.click());
-        cameraBtn.addEventListener('click', () => cameraInput.click());
+        browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+        cameraBtn.addEventListener('click', (e) => { e.stopPropagation(); cameraInput.click(); });
         fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
         cameraInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
         removeImageBtn.addEventListener('click', resetUpload);
