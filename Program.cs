@@ -7,6 +7,7 @@ using ReceiptExpenseTracker.Repositories;
 using ReceiptExpenseTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // ── MVC ───────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews(options =>
