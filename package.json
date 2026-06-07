@@ -1,0 +1,11 @@
+{
+  "name": "receipt-expense-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ASP.NET Core 8 MVC Application - Run 'dotnet build' to compile",
+  "scripts": {
+    "build": "echo 'This is an ASP.NET Core project. Use: dotnet build'",
+    "start": "echo 'Use: dotnet run'",
+    "publish": "echo 'Use: dotnet publish -c Release'"
+  }
+}

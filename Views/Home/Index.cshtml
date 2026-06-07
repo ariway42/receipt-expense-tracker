@@ -1,0 +1,335 @@
+@model DashboardViewModel
+@using Microsoft.AspNetCore.Identity
+@using ReceiptExpenseTracker.Models
+@inject UserManager<ApplicationUser> UserManager
+@{
+    ViewData["Title"] = "Dashboard";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var displayName = !string.IsNullOrWhiteSpace(currentUser?.FirstName)
+        ? currentUser.FirstName
+        : User.Identity?.Name?.Split('@')[0] ?? "there";
+}
+<style>
+    @@media (max-width: 767px) {
+        .desktop-recent {
+            display: none !important;
+        }
+
+        .mobile-recent {
+            display: block !important;
+        }
+    }
+
+    @@media (min-width: 768px) {
+        .mobile-recent {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="h2 fw-bold text-dark mb-1">Dashboard</h1>
+        <p class="text-muted mb-0 d-none d-md-block">Welcome back, <strong>@displayName</strong>! Here's your expense overview.</p>
+    </div>
+    <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient flex-shrink-0">
+        <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Add Expense</span><span class="d-md-none">Add</span>
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4); width: 36px; height: 36px;">
+                    <i class="bi bi-currency-dollar text-white"></i>
+                </div>
+                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Today</span>
+            </div>
+            <p class="text-muted mb-1 small">Total Today</p>
+            <h5 class="fw-bold text-dark mb-0">Rp.@(Model.TotalToday.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</h5>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6); width: 36px; height: 36px;">
+                    <i class="bi bi-graph-up-arrow text-white"></i>
+                </div>
+                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Month</span>
+            </div>
+            <p class="text-muted mb-1 small">Monthly Total</p>
+            <h5 class="fw-bold text-dark mb-0">Rp.@(Model.TotalThisMonth.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</h5>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #EA580C); width: 36px; height: 36px;">
+                    <i class="bi bi-receipt text-white"></i>
+                </div>
+                <span class="badge bg-light text-info small">All Time</span>
+            </div>
+            <p class="text-muted mb-1 small">Transactions</p>
+            <h5 class="fw-bold text-dark mb-0">@Model.TotalTransactions</h5>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #8B5CF6, #7C3AED); width: 36px; height: 36px;">
+                    <i class="bi bi-shop-window text-white"></i>
+                </div>
+                <span class="badge bg-light text-secondary small">Top</span>
+            </div>
+            <p class="text-muted mb-1 small">Most Visited</p>
+            <h6 class="fw-bold text-dark mb-0 text-truncate">@(Model.TopStores.FirstOrDefault()?.StoreName ?? "N/A")</h6>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="fw-semibold mb-0">
+                    <i class="bi bi-graph-up text-primary me-2"></i>Spending Trend
+                </h5>
+                <div class="btn-group btn-group-sm" id="trendPeriodBtns">
+                    <button class="btn btn-outline-secondary active" data-period="daily">Daily</button>
+                    <button class="btn btn-outline-secondary" data-period="weekly">Weekly</button>
+                    <button class="btn btn-outline-secondary" data-period="monthly">Monthly</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="spendingTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card-custom">
+            <div class="card-header">
+                <h5 class="fw-semibold mb-0">
+                    <i class="bi bi-pie-chart text-success me-2"></i>Top Stores
+                </h5>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center">
+                <canvas id="storesChart" width="200" height="200"></canvas>
+                <div class="mt-3" id="storesLegend">
+                    @foreach (var store in Model.TopStores.Take(5))
+                    {
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom gap-2">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                <span class="badge flex-shrink-0" style="background: var(--primary-gradient);">@store.TransactionCount</span>
+                                <span class="text-truncate small">@store.StoreName</span>
+                            </div>
+                            <span class="fw-semibold small flex-shrink-0">Rp.@(store.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions Desktop -->
+<div class="card-custom desktop-recent">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="fw-semibold mb-0">
+            <i class="bi bi-clock-history text-warning me-2"></i>Recent Transactions
+        </h5>
+        <a asp-controller="Transactions" asp-action="Index" class="btn btn-link text-primary text-decoration-none">
+            View All <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom">
+            <thead>
+                <tr>
+                    <th>Store</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.RecentTransactions.Any())
+                {
+                    @foreach (var tx in Model.RecentTransactions)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-shop"></i>
+                                    </div>
+                                    <span class="fw-medium">@tx.StoreName</span>
+                                </div>
+                            </td>
+                            <td><span class="text-muted"><i class="bi bi-calendar me-2"></i>@tx.TransactionDate.ToString("MMM dd, yyyy")</span></td>
+                            <td><span class="badge bg-light text-dark">@tx.ItemCount items</span></td>
+                            <td class="text-end fw-semibold">Rp.@(tx.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</td>
+                            <td class="text-center">
+                                <a asp-controller="Transactions" asp-action="Details" asp-route-id="@tx.Id" class="btn btn-sm btn-link text-primary"><i class="bi bi-eye"></i></a>
+                                <a asp-controller="Transactions" asp-action="Edit" asp-route-id="@tx.Id" class="btn btn-sm btn-link text-warning"><i class="bi bi-pencil"></i></a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-receipt" style="font-size: 3rem; color: #cbd5e1;"></i>
+                            <p class="text-muted mt-3">No transactions yet.</p>
+                            <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Add Your First Expense</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Recent Transactions Mobile -->
+<div class="mobile-recent">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-semibold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Recent Transactions</h5>
+        <a asp-controller="Transactions" asp-action="Index" class="btn btn-link text-primary text-decoration-none p-0">View All</a>
+    </div>
+    @if (Model.RecentTransactions.Any())
+    {
+        @foreach (var tx in Model.RecentTransactions)
+        {
+            <div class="card-custom mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                <i class="bi bi-shop"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">@tx.StoreName</div>
+                                <div class="text-muted small"><i class="bi bi-calendar me-1"></i>@tx.TransactionDate.ToString("MMM dd, yyyy")</div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold text-primary small">Rp.@(tx.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</div>
+                            <span class="badge bg-light text-dark small">@tx.ItemCount items</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a asp-controller="Transactions" asp-action="Details" asp-route-id="@tx.Id" class="btn btn-outline-primary btn-sm flex-grow-1"><i class="bi bi-eye me-1"></i>View</a>
+                        <a asp-controller="Transactions" asp-action="Edit" asp-route-id="@tx.Id" class="btn btn-outline-warning btn-sm flex-grow-1"><i class="bi bi-pencil me-1"></i>Edit</a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="card-custom">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-receipt" style="font-size: 3rem; color: #cbd5e1;"></i>
+                <p class="text-muted mt-3">No transactions yet.</p>
+                <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Add Your First Expense</a>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const spendingCtx = document.getElementById('spendingTrendChart').getContext('2d');
+        const spendingChart = new Chart(spendingCtx, {
+            type: 'line',
+            data: {
+                labels: [@Html.Raw(string.Join(",", Model.DailySpending.Select(d => $"'{d.Label}'")))],
+                datasets: [{
+                    label: 'Spending',
+                    data: [@Html.Raw(string.Join(",", Model.DailySpending.Select(d => d.Amount)))],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'white',
+                        titleColor: '#1e293b',
+                        bodyColor: '#64748b',
+                        borderColor: '#e2e8f0',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: (context) => 'Rp.' + context.raw.toLocaleString('id-ID')
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45 } },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            color: '#94a3b8',
+                            callback: (value) => 'Rp.' + value.toLocaleString('id-ID')
+                        }
+                    }
+                }
+            }
+        });
+
+        const storesCtx = document.getElementById('storesChart').getContext('2d');
+        const storesData = [
+            @foreach (var store in Model.TopStores.Take(5))
+            {
+                    @:{ value: @store.TotalAmount, name: '@store.StoreName' },
+            }
+        ];
+
+        const colors = ['#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#8B5CF6'];
+        new Chart(storesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: storesData.map(d => d.name),
+                datasets: [{
+                    data: storesData.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => 'Rp.' + context.raw.toLocaleString('id-ID')
+                        }
+                    }
+                }
+            }
+        });
+
+        document.querySelectorAll('#trendPeriodBtns button').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                document.querySelectorAll('#trendPeriodBtns button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                showToast('success', 'Chart updated to ' + this.dataset.period + ' view');
+            });
+        });
+    </script>
+}

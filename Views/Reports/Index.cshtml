@@ -1,0 +1,266 @@
+@model ReportViewModel
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<style>
+    @@media (max-width: 767px) {
+        .desktop-store-table {
+            display: none !important;
+        }
+
+        .mobile-store-cards {
+            display: block !important;
+        }
+    }
+
+    @@media (min-width: 768px) {
+        .mobile-store-cards {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="h2 fw-bold text-dark mb-1">Reports</h1>
+        <p class="text-muted mb-0 d-none d-md-block">Analyze your spending patterns and trends</p>
+    </div>
+    <a asp-action="Export" asp-route-period="@Model.Period" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+        <i class="bi bi-download me-1"></i><span class="d-none d-md-inline">Export Report</span>
+    </a>
+</div>
+
+<!-- Period Selector -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    @foreach (var period in new[] { "daily", "weekly", "monthly", "yearly" })
+    {
+        <a asp-action="Index" asp-route-period="@period"
+           class="period-btn @(Model.Period == period ? "active" : "")">
+            @period.Substring(0, 1).ToUpper()@period.Substring(1)
+        </a>
+    }
+</div>
+
+<!-- Summary Cards -->
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon flex-shrink-0" style="background: linear-gradient(135deg, #3B82F6, #06B6D4); width: 40px; height: 40px;">
+                    <i class="bi bi-cash text-white"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Total Spending</p>
+                    <h6 class="fw-bold mb-0">Rp.@Model.PeriodTotal.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon flex-shrink-0" style="background: linear-gradient(135deg, #10B981, #14B8A6); width: 40px; height: 40px;">
+                    <i class="bi bi-receipt text-white"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Transactions</p>
+                    <h6 class="fw-bold mb-0">@Model.PeriodTransactionCount</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon flex-shrink-0" style="background: linear-gradient(135deg, #F59E0B, #EA580C); width: 40px; height: 40px;">
+                    <i class="bi bi-graph-up text-white"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Average</p>
+                    <h6 class="fw-bold mb-0">Rp.@Model.PeriodAverage.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card-custom">
+            <div class="card-header">
+                <h5 class="fw-semibold mb-0 small">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>Spending Trend - @Model.Period.Substring(0, 1).ToUpper()@Model.Period.Substring(1)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spendingTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card-custom">
+            <div class="card-header">
+                <h5 class="fw-semibold mb-0 small">
+                    <i class="bi bi-pie-chart text-success me-2"></i>By Store
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="storeDistributionChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Comparison -->
+<div class="card-custom mb-4">
+    <div class="card-header">
+        <h5 class="fw-semibold mb-0 small">
+            <i class="bi bi-bar-chart text-warning me-2"></i>Monthly Comparison (Last 6 Months)
+        </h5>
+    </div>
+    <div class="card-body">
+        <canvas id="monthlyComparisonChart" height="150"></canvas>
+    </div>
+</div>
+
+<!-- Store Summary Desktop Table -->
+<div class="card-custom desktop-store-table">
+    <div class="card-header">
+        <h5 class="fw-semibold mb-0">
+            <i class="bi bi-table text-info me-2"></i>Store Summary
+        </h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>Store</th>
+                    <th class="text-end">Transactions</th>
+                    <th class="text-end">Total Spent</th>
+                    <th class="text-end">Average</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var store in Model.StoreSummaries)
+                {
+                    <tr>
+                        <td><span class="fw-medium">@store.StoreName</span></td>
+                        <td class="text-end">@store.TransactionCount</td>
+                        <td class="text-end fw-semibold">Rp.@store.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</td>
+                        <td class="text-end">Rp.@((store.TotalAmount / store.TransactionCount).ToString("N0", new System.Globalization.CultureInfo("id-ID")))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Store Summary Mobile Cards -->
+<div class="mobile-store-cards">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-semibold mb-0"><i class="bi bi-table text-info me-2"></i>Store Summary</h5>
+    </div>
+    @foreach (var store in Model.StoreSummaries)
+    {
+        <div class="card-custom mb-3 p-3">
+            <div class="fw-semibold mb-2">@store.StoreName</div>
+            <div class="d-flex justify-content-between text-muted small mb-1">
+                <span>Transactions</span>
+                <span class="fw-medium text-dark">@store.TransactionCount</span>
+            </div>
+            <div class="d-flex justify-content-between text-muted small mb-1">
+                <span>Total Spent</span>
+                <span class="fw-semibold text-primary">Rp.@store.TotalAmount.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</span>
+            </div>
+            <div class="d-flex justify-content-between text-muted small">
+                <span>Average</span>
+                <span class="fw-medium text-dark">Rp.@((store.TotalAmount / store.TransactionCount).ToString("N0", new System.Globalization.CultureInfo("id-ID")))</span>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const colors = ['#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+        new Chart(document.getElementById('spendingTrendChart'), {
+            type: 'line',
+            data: {
+                labels: [@Html.Raw(string.Join(",", Model.SpendingTrend.Select(d => $"'{d.Label}'")))],
+                datasets: [{
+                    label: 'Spending',
+                    data: [@Html.Raw(string.Join(",", Model.SpendingTrend.Select(d => d.Amount)))],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: { callback: (v) => 'Rp.' + v.toLocaleString('id-ID') }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('storeDistributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: [@Html.Raw(string.Join(",", Model.StoreSummaries.Take(6).Select(s => $"'{s.StoreName}'")))],
+                datasets: [{
+                    data: [@Html.Raw(string.Join(",", Model.StoreSummaries.Take(6).Select(s => s.TotalAmount)))],
+                    backgroundColor: colors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: (c) => 'Rp.' + c.raw.toLocaleString('id-ID') } }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('monthlyComparisonChart'), {
+            type: 'bar',
+            data: {
+                labels: [@Html.Raw(string.Join(",", Model.MonthlyComparisons.Select(m => $"'{m.Month}'")))],
+                datasets: [{
+                    label: 'Total Spent',
+                    data: [@Html.Raw(string.Join(",", Model.MonthlyComparisons.Select(m => m.Amount)))],
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (c) => 'Rp.' + c.raw.toLocaleString('id-ID') } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: { callback: (v) => 'Rp.' + v.toLocaleString('id-ID') }
+                    }
+                }
+            }
+        });
+    </script>
+}

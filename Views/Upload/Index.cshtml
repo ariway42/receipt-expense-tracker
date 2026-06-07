@@ -1,0 +1,337 @@
+@model UploadReceiptViewModel
+@{
+    ViewData["Title"] = "Upload Receipt";
+}
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="mb-4">
+            <h1 class="h2 fw-bold text-dark">Upload Receipt</h1>
+            <p class="text-muted">Upload or capture a receipt image to track your expenses</p>
+        </div>
+
+        <!-- Upload Zone -->
+        <div class="card-custom mb-4" id="uploadCard">
+            <div class="card-body">
+                <div class="upload-zone" id="dropZone">
+                    <input type="file" id="fileInput" accept="image/*" class="d-none" />
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="d-none" />
+
+                    <div id="uploadPrompt">
+                        <div class="mb-4">
+                            <div class="stat-icon mx-auto" style="background: var(--primary-gradient);">
+                                <i class="bi bi-cloud-arrow-up text-white fs-3"></i>
+                            </div>
+                        </div>
+                        <h5 class="fw-semibold text-dark mb-2">Drag & drop your receipt here</h5>
+                        <p class="text-muted mb-4">Supports JPG, PNG, JPEG</p>
+                    </div>
+
+                    <div id="previewContainer" class="d-none">
+                        <img id="imagePreview" class="img-fluid image-preview mb-3" />
+                        <button type="button" class="btn btn-outline-danger" id="removeImageBtn">
+                            <i class="bi bi-x-lg me-2"></i>Remove
+                        </button>
+                    </div>
+
+                    <div id="processingIndicator" class="d-none">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <p class="text-muted">Processing receipt with OCR...</p>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-4" id="actionButtons">
+                    <div class="col-sm-6">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="browseBtn">
+                            <i class="bi bi-folder me-2"></i>Browse Files
+                        </button>
+                    </div>
+                    <div class="col-sm-6">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="cameraBtn">
+                            <i class="bi bi-camera me-2"></i>Take Photo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Form (shown after OCR processing) -->
+        <div class="card-custom d-none" id="editCard">
+            <div class="card-header">
+                <h5 class="fw-semibold mb-0">
+                    <i class="bi bi-pencil text-primary me-2"></i>Confirm Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="transactionForm" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="imageData" name="imageData" />
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-medium">Store Name</label>
+                            <input type="text" id="storeName" name="storeName" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Date</label>
+                            <input type="date" id="transactionDate" name="transactionDate" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Total Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp.</span>
+                                <input type="number" id="totalAmount" name="totalAmount" class="form-control" step="0.01" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold mb-0">
+                            <i class="bi bi-list-ul text-secondary me-2"></i>Items
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="addItemBtn">
+                            <i class="bi bi-plus-lg me-1"></i>Add Item
+                        </button>
+                    </div>
+
+                    <div id="itemsContainer"></div>
+
+                    <div class="alert alert-warning d-none" id="validationAlert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span id="validationMessage"></span>
+                    </div>
+
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="button" class="btn btn-outline-secondary flex-grow-1" id="cancelBtn">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-gradient flex-grow-1">
+                            <i class="bi bi-check-lg me-2"></i>Save Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentImageData = null;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const cameraInput = document.getElementById('cameraInput');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const processingIndicator = document.getElementById('processingIndicator');
+        const uploadCard = document.getElementById('uploadCard');
+        const editCard = document.getElementById('editCard');
+        const actionButtons = document.getElementById('actionButtons');
+        const transactionForm = document.getElementById('transactionForm');
+        const browseBtn = document.getElementById('browseBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemsContainer = document.getElementById('itemsContainer');
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) handleFile(file);
+        });
+
+        dropZone.addEventListener('click', (e) => {
+            if (!e.target.closest('#previewContainer') && !e.target.closest('#processingIndicator')) {
+                fileInput.click();
+            }
+        });
+        browseBtn.addEventListener('click', () => fileInput.click());
+        cameraBtn.addEventListener('click', () => cameraInput.click());
+        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+        cameraInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+        removeImageBtn.addEventListener('click', resetUpload);
+
+        cancelBtn.addEventListener('click', () => {
+            editCard.classList.add('d-none');
+            uploadCard.classList.remove('d-none');
+            actionButtons.classList.remove('d-none');
+            resetUpload();
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImageData = e.target.result;
+                imagePreview.src = currentImageData;
+                uploadPrompt.classList.add('d-none');
+                previewContainer.classList.remove('d-none');
+                actionButtons.classList.add('d-none');
+                processReceipt(file);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function processReceipt(file) {
+            previewContainer.classList.add('d-none');
+            processingIndicator.classList.remove('d-none');
+
+            const formData = new FormData();
+            formData.append('receiptImage', file);
+
+            try {
+                const response = await fetch('@Url.Action("ProcessReceipt", "Upload")', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('storeName').value = result.storeName || '';
+                    // Selalu pakai tanggal hari ini
+                    document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('totalAmount').value = result.totalAmount || '';
+                    document.getElementById('imageData').value = result.imageData || currentImageData || '';
+
+                    itemsContainer.innerHTML = '';
+                    if (result.items && result.items.length > 0) {
+                        result.items.forEach(item => addFormItem(item));
+                    } else {
+                        addFormItem();
+                    }
+
+                    uploadCard.classList.add('d-none');
+                    editCard.classList.remove('d-none');
+                } else {
+                    showToast('danger', result.message || 'Failed to process receipt');
+                    resetUpload();
+                }
+            } catch (error) {
+                console.error('OCR Error:', error);
+                showToast('danger', 'An error occurred while processing the receipt');
+                resetUpload();
+            } finally {
+                processingIndicator.classList.add('d-none');
+            }
+        }
+
+        function addFormItem(item = null) {
+            const div = document.createElement('div');
+            div.className = 'row g-2 mb-2 item-row';
+            div.innerHTML = `
+                <div class="col-md-6">
+                    <input type="text" class="form-control item-name" placeholder="Item name"
+                           value="${item?.itemName || ''}" />
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control item-price" placeholder="Price"
+                           step="0.01" value="${item?.price || ''}" />
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control item-quantity" placeholder="Qty"
+                           min="1" value="${item?.quantity || 1}" />
+                </div>
+                <div class="col-md-1 d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            div.querySelector('.remove-item-btn').addEventListener('click', () => {
+                if (itemsContainer.querySelectorAll('.item-row').length > 1) div.remove();
+            });
+            itemsContainer.appendChild(div);
+        }
+
+        addItemBtn.addEventListener('click', () => addFormItem());
+
+        transactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Sembunyikan alert lama
+            document.getElementById('validationAlert').classList.add('d-none');
+
+            const storeName = document.getElementById('storeName').value.trim();
+            const transactionDate = document.getElementById('transactionDate').value;
+            const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+
+            if (!storeName) { showValidationError('Store name is required'); return; }
+            if (!transactionDate) { showValidationError('Date is required'); return; }
+            if (!totalAmount || totalAmount <= 0) { showValidationError('Total amount is required'); return; }
+
+            const items = [];
+            let hasEmptyName = false;
+
+            document.querySelectorAll('.item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const quantity = parseInt(row.querySelector('.item-quantity').value) || 1;
+                if (!name) { hasEmptyName = true; return; }
+                items.push({ itemName: name, price, quantity });
+            });
+
+            if (hasEmptyName) { showValidationError('Please fill in all item names'); return; }
+            if (items.length === 0) { showValidationError('At least one item is required'); return; }
+
+            const payload = { storeName, transactionDate, totalAmount, items };
+
+            showLoading();
+            try {
+                const response = await fetch('@Url.Action("Save", "Upload")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast('success', 'Transaction saved successfully!');
+                    window.location.href = '@Url.Action("Index", "Transactions")';
+                } else {
+                    showToast('danger', result.message || 'Failed to save transaction');
+                }
+            } catch (error) {
+                showToast('danger', 'An error occurred while saving');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showValidationError(message) {
+            const alert = document.getElementById('validationAlert');
+            document.getElementById('validationMessage').textContent = message;
+            alert.classList.remove('d-none');
+            alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function resetUpload() {
+            currentImageData = null;
+            fileInput.value = '';
+            cameraInput.value = '';
+            uploadPrompt.classList.remove('d-none');
+            previewContainer.classList.add('d-none');
+            processingIndicator.classList.add('d-none');
+            actionButtons.classList.remove('d-none');
+        }
+    </script>
+}

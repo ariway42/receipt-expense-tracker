@@ -1,0 +1,43 @@
+@{
+    ViewData["Title"] = "Privacy Policy";
+}
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card-custom">
+            <div class="card-header">
+                <h1 class="h4 fw-semibold mb-0">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Privacy Policy
+                </h1>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Last updated: @DateTime.UtcNow.ToString("MMMM dd, yyyy")</p>
+
+                <h5 class="fw-semibold mt-4">Data Collection</h5>
+                <p>We collect transaction data including store names, purchase amounts, and item details that you voluntarily upload through receipt images.</p>
+
+                <h5 class="fw-semibold mt-4">Data Storage</h5>
+                <p>Your data is stored securely using industry-standard encryption. Receipt images are stored locally on the server and are not shared with third parties.</p>
+
+                <h5 class="fw-semibold mt-4">Data Usage</h5>
+                <p>We use your expense data to provide insights, reports, and analytics about your spending habits. We do not sell or share your personal financial information.</p>
+
+                <h5 class="fw-semibold mt-4">Your Rights</h5>
+                <ul>
+                    <li>You can view, edit, or delete your transactions at any time</li>
+                    <li>You can export your data to Excel format</li>
+                    <li>You can request complete data deletion</li>
+                </ul>
+
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    For questions about privacy or data handling, please contact the administrator.
+                </div>
+
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary mt-3">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
