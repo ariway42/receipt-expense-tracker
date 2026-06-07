@@ -23,11 +23,11 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 gap-2">
     <div>
-        <h1 class="h2 fw-bold text-dark mb-1">Reports</h1>
-        <p class="text-muted mb-0 d-none d-md-block">Analyze your spending patterns and trends</p>
+        <h1 class="h2 fw-bold text-dark mb-1">Laporan</h1>
+        <p class="text-muted mb-0 d-none d-md-block">Analisis pola dan tren pengeluaran kamu</p>
     </div>
     <a asp-action="Export" asp-route-period="@Model.Period" class="btn btn-outline-secondary btn-sm flex-shrink-0">
-        <i class="bi bi-download me-1"></i><span class="d-none d-md-inline">Export Report</span>
+        <i class="bi bi-download me-1"></i><span class="d-none d-md-inline">Unduh Laporan</span>
     </a>
 </div>
 
@@ -35,9 +35,17 @@
 <div class="d-flex flex-wrap gap-2 mb-4">
     @foreach (var period in new[] { "daily", "weekly", "monthly", "yearly" })
     {
+        var label = period switch
+        {
+            "daily" => "Harian",
+            "weekly" => "Mingguan",
+            "monthly" => "Bulanan",
+            "yearly" => "Tahunan",
+            _ => period
+        };
         <a asp-action="Index" asp-route-period="@period"
            class="period-btn @(Model.Period == period ? "active" : "")">
-            @period.Substring(0, 1).ToUpper()@period.Substring(1)
+            @label
         </a>
     }
 </div>
@@ -52,7 +60,7 @@
                     <i class="bi bi-cash text-white"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Total Spending</p>
+                    <p class="text-muted small mb-0">Total Pengeluaran</p>
                     <h6 class="fw-bold mb-0">Rp.@Model.PeriodTotal.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</h6>
                 </div>
             </div>
@@ -65,7 +73,7 @@
                     <i class="bi bi-receipt text-white"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Transactions</p>
+                    <p class="text-muted small mb-0">Transaksi</p>
                     <h6 class="fw-bold mb-0">@Model.PeriodTransactionCount</h6>
                 </div>
             </div>
@@ -78,7 +86,7 @@
                     <i class="bi bi-graph-up text-white"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Average</p>
+                    <p class="text-muted small mb-0">Rata-rata</p>
                     <h6 class="fw-bold mb-0">Rp.@Model.PeriodAverage.ToString("N0", new System.Globalization.CultureInfo("id-ID"))</h6>
                 </div>
             </div>
@@ -92,7 +100,17 @@
         <div class="card-custom">
             <div class="card-header">
                 <h5 class="fw-semibold mb-0 small">
-                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>Spending Trend - @Model.Period.Substring(0, 1).ToUpper()@Model.Period.Substring(1)
+                    @{
+                        var periodLabel = Model.Period switch
+                        {
+                            "daily" => "Harian",
+                            "weekly" => "Mingguan",
+                            "monthly" => "Bulanan",
+                            "yearly" => "Tahunan",
+                            _ => Model.Period
+                        };
+                    }
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>Tren Pengeluaran - @periodLabel
                 </h5>
             </div>
             <div class="card-body">
@@ -105,7 +123,7 @@
         <div class="card-custom">
             <div class="card-header">
                 <h5 class="fw-semibold mb-0 small">
-                    <i class="bi bi-pie-chart text-success me-2"></i>By Store
+                    <i class="bi bi-pie-chart text-success me-2"></i>Berdasarkan Toko
                 </h5>
             </div>
             <div class="card-body">
@@ -119,7 +137,7 @@
 <div class="card-custom mb-4">
     <div class="card-header">
         <h5 class="fw-semibold mb-0 small">
-            <i class="bi bi-bar-chart text-warning me-2"></i>Monthly Comparison (Last 6 Months)
+            <i class="bi bi-bar-chart text-warning me-2"></i>Perbandingan Bulanan (6 Bulan Terakhir)
         </h5>
     </div>
     <div class="card-body">
@@ -131,17 +149,17 @@
 <div class="card-custom desktop-store-table">
     <div class="card-header">
         <h5 class="fw-semibold mb-0">
-            <i class="bi bi-table text-info me-2"></i>Store Summary
+            <i class="bi bi-table text-info me-2"></i>Ringkasan Toko
         </h5>
     </div>
     <div class="table-responsive">
         <table class="table table-custom mb-0">
             <thead>
                 <tr>
-                    <th>Store</th>
-                    <th class="text-end">Transactions</th>
-                    <th class="text-end">Total Spent</th>
-                    <th class="text-end">Average</th>
+                    <th>Toko</th>
+                    <th class="text-end">Transaksi</th>
+                    <th class="text-end">Total Pengeluaran</th>
+                    <th class="text-end">Rata-Rata</th>
                 </tr>
             </thead>
             <tbody>

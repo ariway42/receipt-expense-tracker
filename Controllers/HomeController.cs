@@ -41,6 +41,36 @@ namespace ReceiptExpenseTracker.Controllers
             return View();
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(string currentPassword, string newPassword, string confirmPassword)
+        {
+            if (newPassword != confirmPassword)
+            {
+                TempData["Error"] = "Password baru dan konfirmasi password tidak cocok.";
+                return RedirectToAction("Privacy");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                TempData["Error"] = "User tidak ditemukan.";
+                return RedirectToAction("Privacy");
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Password berhasil diubah!";
+            }
+            else
+            {
+                TempData["Error"] = "Gagal mengubah password. Pastikan password lama benar dan password baru minimal 6 karakter.";
+            }
+
+            return RedirectToAction("Privacy");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

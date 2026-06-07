@@ -30,10 +30,10 @@
 <div class="d-flex justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 class="h2 fw-bold text-dark mb-1">Dashboard</h1>
-        <p class="text-muted mb-0 d-none d-md-block">Welcome back, <strong>@displayName</strong>! Here's your expense overview.</p>
+        <p class="text-muted mb-0 d-none d-md-block">Selamat Datang, <strong>@displayName</strong>! Berikut ringkasan pengeluaran kamu.</p>
     </div>
     <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient flex-shrink-0">
-        <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Add Expense</span><span class="d-md-none">Add</span>
+        <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Tambah Pengeluaran</span><span class="d-md-none">Tambah</span>
     </a>
 </div>
 
@@ -45,9 +45,9 @@
                 <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4); width: 36px; height: 36px;">
                     <i class="bi bi-currency-dollar text-white"></i>
                 </div>
-                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Today</span>
+                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Hari Ini</span>
             </div>
-            <p class="text-muted mb-1 small">Total Today</p>
+            <p class="text-muted mb-1 small">Total Hari Ini</p>
             <h5 class="fw-bold text-dark mb-0">Rp.@(Model.TotalToday.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</h5>
         </div>
     </div>
@@ -57,9 +57,9 @@
                 <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6); width: 36px; height: 36px;">
                     <i class="bi bi-graph-up-arrow text-white"></i>
                 </div>
-                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Month</span>
+                <span class="badge bg-light text-success small"><i class="bi bi-arrow-up"></i> Bulan ini</span>
             </div>
-            <p class="text-muted mb-1 small">Monthly Total</p>
+            <p class="text-muted mb-1 small">Total Bulan ini</p>
             <h5 class="fw-bold text-dark mb-0">Rp.@(Model.TotalThisMonth.ToString("N0", new System.Globalization.CultureInfo("id-ID")))</h5>
         </div>
     </div>
@@ -69,9 +69,9 @@
                 <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #EA580C); width: 36px; height: 36px;">
                     <i class="bi bi-receipt text-white"></i>
                 </div>
-                <span class="badge bg-light text-info small">All Time</span>
+                <span class="badge bg-light text-info small">Semua</span>
             </div>
-            <p class="text-muted mb-1 small">Transactions</p>
+            <p class="text-muted mb-1 small">Transaksi</p>
             <h5 class="fw-bold text-dark mb-0">@Model.TotalTransactions</h5>
         </div>
     </div>
@@ -81,9 +81,9 @@
                 <div class="stat-icon" style="background: linear-gradient(135deg, #8B5CF6, #7C3AED); width: 36px; height: 36px;">
                     <i class="bi bi-shop-window text-white"></i>
                 </div>
-                <span class="badge bg-light text-secondary small">Top</span>
+                <span class="badge bg-light text-secondary small">Teratas</span>
             </div>
-            <p class="text-muted mb-1 small">Most Visited</p>
+            <p class="text-muted mb-1 small">Toko Terfavorit</p>
             <h6 class="fw-bold text-dark mb-0 text-truncate">@(Model.TopStores.FirstOrDefault()?.StoreName ?? "N/A")</h6>
         </div>
     </div>
@@ -95,12 +95,12 @@
         <div class="card-custom">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="fw-semibold mb-0">
-                    <i class="bi bi-graph-up text-primary me-2"></i>Spending Trend
+                    <i class="bi bi-graph-up text-primary me-2"></i>Tren Pengeluaran
                 </h5>
                 <div class="btn-group btn-group-sm" id="trendPeriodBtns">
-                    <button class="btn btn-outline-secondary active" data-period="daily">Daily</button>
-                    <button class="btn btn-outline-secondary" data-period="weekly">Weekly</button>
-                    <button class="btn btn-outline-secondary" data-period="monthly">Monthly</button>
+                    <button class="btn btn-outline-secondary active" data-period="daily">Harian</button>
+                    <button class="btn btn-outline-secondary" data-period="weekly">Mingguan</button>
+                    <button class="btn btn-outline-secondary" data-period="monthly">Bulanan</button>
                 </div>
             </div>
             <div class="card-body">
@@ -113,7 +113,7 @@
         <div class="card-custom">
             <div class="card-header">
                 <h5 class="fw-semibold mb-0">
-                    <i class="bi bi-pie-chart text-success me-2"></i>Top Stores
+                    <i class="bi bi-pie-chart text-success me-2"></i>Toko Terfavorit
                 </h5>
             </div>
             <div class="card-body d-flex flex-column align-items-center">
@@ -139,21 +139,21 @@
 <div class="card-custom desktop-recent">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="fw-semibold mb-0">
-            <i class="bi bi-clock-history text-warning me-2"></i>Recent Transactions
+            <i class="bi bi-clock-history text-warning me-2"></i>Transaksi Terbaru
         </h5>
         <a asp-controller="Transactions" asp-action="Index" class="btn btn-link text-primary text-decoration-none">
-            View All <i class="bi bi-arrow-right ms-1"></i>
+            Tampilkan Semua <i class="bi bi-arrow-right ms-1"></i>
         </a>
     </div>
     <div class="table-responsive">
         <table class="table table-custom">
             <thead>
                 <tr>
-                    <th>Store</th>
-                    <th>Date</th>
+                    <th>Toko</th>
+                    <th>Tanggal</th>
                     <th>Items</th>
-                    <th class="text-end">Amount</th>
-                    <th class="text-center">Actions</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -186,7 +186,7 @@
                         <td colspan="5" class="text-center py-5">
                             <i class="bi bi-receipt" style="font-size: 3rem; color: #cbd5e1;"></i>
                             <p class="text-muted mt-3">No transactions yet.</p>
-                            <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Add Your First Expense</a>
+                            <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Tambah Pengeluaran Pertama</a>
                         </td>
                     </tr>
                 }
@@ -236,7 +236,7 @@
             <div class="card-body text-center py-4">
                 <i class="bi bi-receipt" style="font-size: 3rem; color: #cbd5e1;"></i>
                 <p class="text-muted mt-3">No transactions yet.</p>
-                <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Add Your First Expense</a>
+                <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">Tambah Pengeluaran Pertama</a>
             </div>
         </div>
     }

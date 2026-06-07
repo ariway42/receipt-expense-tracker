@@ -1,76 +1,100 @@
 ﻿@model EditTransactionViewModel
 @{
-    ViewData["Title"] = "Edit Transaction";
+    ViewData["Title"] = "Edit Transaksi";
 }
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
-        <form asp-action="Edit" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
+        <div class="mb-4">
+            <h1 class="h2 fw-bold text-dark">Edit Transaksi</h1>
+            <p class="text-muted">Ubah detail transaksi kamu</p>
+        </div>
 
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="StoreName" class="form-label fw-medium"></label>
-                    <input asp-for="StoreName" class="form-control" />
-                </div>
+        <div class="card-custom">
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
 
-                <div class="col-md-3">
-                    <label asp-for="TransactionDate" class="form-label fw-medium"></label>
-                    <input asp-for="TransactionDate" class="form-control" type="date" />
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label fw-medium">Total Amount</label>
-                    <div class="input-group">
-                        <span class="input-group-text">Rp</span>
-
-                        <input id="TotalAmountDisplay"
-                               class="form-control"
-                               autocomplete="off" />
-
-                        <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
-                    </div>
-                </div>
-            </div>
-
-            <hr class="my-4" />
-
-            <div id="itemsContainer">
-                @for (int i = 0; i < Model.Items.Count; i++)
-                {
-                    <div class="row g-2 mb-2 item-row">
-                        <input type="hidden" name="Items[@i].Id" value="@Model.Items[i].Id" />
-
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <input type="text" name="Items[@i].ItemName"
-                                   value="@Model.Items[i].ItemName"
-                                   class="form-control" />
+                            <label asp-for="StoreName" class="form-label fw-medium">Nama Toko</label>
+                            <input asp-for="StoreName" class="form-control" />
                         </div>
 
                         <div class="col-md-3">
-                            <input type="text"
-                                   class="form-control price-input"
-                                   value="@Model.Items[i].Price" />
-                            <input type="hidden" name="Items[@i].Price"
-                                   value="@Model.Items[i].Price" />
+                            <label asp-for="TransactionDate" class="form-label fw-medium">Tanggal</label>
+                            <input asp-for="TransactionDate" class="form-control" type="date" />
                         </div>
 
-                        <div class="col-md-2">
-                            <input type="number" name="Items[@i].Quantity"
-                                   value="@Model.Items[i].Quantity"
-                                   class="form-control" min="1" />
+                        <div class="col-md-3">
+                            <label class="form-label fw-medium">Total Belanja</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input id="TotalAmountDisplay" class="form-control" autocomplete="off" />
+                                <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
+                            </div>
                         </div>
                     </div>
-                }
-            </div>
 
-            <div class="d-flex gap-3 mt-4">
-                <button type="submit" class="btn btn-primary flex-grow-1">
-                    Save
-                </button>
+                    <hr class="my-4" />
+
+                    <h6 class="fw-semibold mb-3">
+                        <i class="bi bi-list-ul text-secondary me-2"></i>Daftar Item
+                    </h6>
+
+                    <!-- Label header item -->
+                    <div class="row g-2 mb-2 text-muted small fw-medium d-none d-md-flex">
+                        <div class="col-md-6">Nama Item</div>
+                        <div class="col-md-3">Harga</div>
+                        <div class="col-md-2">Jumlah</div>
+                    </div>
+
+                    <div id="itemsContainer">
+                        @for (int i = 0; i < Model.Items.Count; i++)
+                        {
+                            <div class="row g-2 mb-3 pb-3 item-row align-items-center border-bottom">
+                                <input type="hidden" name="Items[@i].Id" value="@Model.Items[i].Id" />
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted d-md-none">Nama Item</label>
+                                    <input type="text" name="Items[@i].ItemName"
+                                           value="@Model.Items[i].ItemName"
+                                           class="form-control" placeholder="Nama item" />
+                                </div>
+
+                                <div class="col-8 col-md-3">
+                                    <label class="form-label small text-muted d-md-none">Harga</label>
+                                    <input type="text"
+                                           class="form-control price-input"
+                                           value="@Model.Items[i].Price"
+                                           placeholder="Harga" />
+                                    <input type="hidden" name="Items[@i].Price"
+                                           value="@Model.Items[i].Price" />
+                                </div>
+
+                                <div class="col-4 col-md-2">
+                                    <label class="form-label small text-muted d-md-none">Jumlah</label>
+                                    <input type="number" name="Items[@i].Quantity"
+                                           value="@Model.Items[i].Quantity"
+                                           class="form-control" min="1"
+                                           placeholder="Jml" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex gap-3 mt-4">
+                        <a asp-action="Index" class="btn btn-outline-secondary flex-grow-1">
+                            <i class="bi bi-arrow-left me-2"></i>Batal
+                        </a>
+                        <button type="submit" class="btn btn-gradient flex-grow-1">
+                            <i class="bi bi-check-lg me-2"></i>Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 

@@ -23,12 +23,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 gap-2">
     <div>
-        <h1 class="h2 fw-bold text-dark mb-1">Transactions</h1>
-        <p class="text-muted mb-0 d-none d-md-block">View and manage your expense history</p>
+        <h1 class="h2 fw-bold text-dark mb-1">Transaksi</h1>
+        <p class="text-muted mb-0 d-none d-md-block">Lihat dan kelola riwayat pengeluaran kamu</p>
     </div>
     <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <a asp-controller="Upload" asp-action="Index" class="btn btn-gradient">
-            <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Add New</span><span class="d-md-none">Add</span>
+            <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Tambah Baru</span><span class="d-md-none">Tambah</span>
         </a>
         <form method="post" asp-action="Export" class="d-flex m-0">
             @Html.AntiForgeryToken()
@@ -39,7 +39,7 @@
             <input type="hidden" name="minAmount" value="@Model.Filter.MinAmount" />
             <input type="hidden" name="maxAmount" value="@Model.Filter.MaxAmount" />
             <button type="submit" class="btn btn-outline-secondary" @(Model.TotalCount == 0 ? "disabled" : "")>
-                <i class="bi bi-download me-1"></i><span class="d-none d-md-inline">Export</span>
+                <i class="bi bi-download me-1"></i><span class="d-none d-md-inline">Unduh</span>
             </button>
         </form>
     </div>
@@ -49,23 +49,23 @@
 <div class="filter-bar mb-4">
     <div class="d-md-none mb-2">
         <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-            <i class="bi bi-funnel me-2"></i>Filter & Search
+            <i class="bi bi-funnel me-2"></i>Filter & Cari
         </button>
     </div>
     <div class="collapse d-md-block" id="filterCollapse">
         <form method="get" id="filterForm">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-3">
-                    <label class="form-label small text-muted">Search</label>
+                    <label class="form-label small text-muted">Cari</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="searchTerm" value="@Model.Filter.SearchTerm" class="form-control" placeholder="Store name..." />
+                        <input type="text" name="searchTerm" value="@Model.Filter.SearchTerm" class="form-control" placeholder="Nama Toko..." />
                     </div>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small text-muted">Store</label>
+                    <label class="form-label small text-muted">Toko</label>
                     <select name="store" class="form-select">
-                        <option value="">All Stores</option>
+                        <option value="">Semua Toko</option>
                         @foreach (var store in Model.Stores)
                         {
                             <option value="@store" selected="@(Model.Filter.Store == store)">@store</option>
@@ -73,11 +73,11 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small text-muted">Date From</label>
+                    <label class="form-label small text-muted">Dari Tanggal</label>
                     <input type="date" name="dateFrom" value="@Model.Filter.DateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small text-muted">Date To</label>
+                    <label class="form-label small text-muted">Sampai Tanggal</label>
                     <input type="date" name="dateTo" value="@Model.Filter.DateTo?.ToString("yyyy-MM-dd")" class="form-control" />
                 </div>
                 <div class="col-3 col-md-1">
@@ -85,7 +85,7 @@
                     <input type="number" name="minAmount" value="@Model.Filter.MinAmount" step="0.01" class="form-control" placeholder="0" />
                 </div>
                 <div class="col-3 col-md-1">
-                    <label class="form-label small text-muted">Max</label>
+                    <label class="form-label small text-muted">Maks</label>
                     <input type="number" name="maxAmount" value="@Model.Filter.MaxAmount" step="0.01" class="form-control" placeholder="0" />
                 </div>
                 <div class="col-12 col-md-1">
@@ -104,7 +104,7 @@
 </div>
 
 <p class="text-muted small mb-3">
-    Showing @Model.Transactions.Count of @Model.TotalCount transactions
+    Menampilkan @Model.Transactions.Count dari @Model.TotalCount transaksi
 </p>
 
 @if (Model.Transactions.Any())
@@ -115,11 +115,11 @@
             <table class="table table-custom">
                 <thead>
                     <tr>
-                        <th>Store</th>
-                        <th>Date</th>
+                        <th>Toko</th>
+                        <th>Tanggal</th>
                         <th>Items</th>
-                        <th class="text-end">Amount</th>
-                        <th class="text-center">Actions</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>

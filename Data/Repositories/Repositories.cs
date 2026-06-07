@@ -53,7 +53,7 @@ namespace ReceiptExpenseTracker.Repositories
                 query = query.Where(t => t.UserId == userId);
 
             if (!string.IsNullOrEmpty(searchTerm))
-                query = query.Where(t => t.StoreName.Contains(searchTerm));
+                query = query.Where(t => t.StoreName.ToLower().Contains(searchTerm.ToLower()));
 
             if (!string.IsNullOrEmpty(store))
                 query = query.Where(t => t.StoreName == store);
