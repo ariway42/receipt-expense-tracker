@@ -1,6 +1,5 @@
 ﻿using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ReceiptExpenseTracker.Data;
 using ReceiptExpenseTracker.Models;
@@ -10,34 +9,18 @@ using ReceiptExpenseTracker.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── MVC ───────────────────────────────────────────────────────────────────────
-// Global [Authorize] — semua page butuh login kecuali yang [AllowAnonymous]
-//builder.Services.AddControllersWithViews(options =>
-//{
-//    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
-//});
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
+});
 
-//// ── Database ──────────────────────────────────────────────────────────────────
-////builder.Services.AddDbContext<ApplicationDbContext>(options =>
-////    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-//if (builder.Environment.IsDevelopment())
-//{
-//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-//}
-//else
-//{
-//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-//}
-
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// ── Database ──────────────────────────────────────────────────────────────────
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Identity ──────────────────────────────────────────────────────────────────
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Password rules — sesuaikan kalau mau lebih longgar/ketat
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
@@ -47,7 +30,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// ── Cookie (redirect ke login kalau belum auth) ───────────────────────────────
+// ── Cookie ────────────────────────────────────────────────────────────────────
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -70,6 +53,8 @@ builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.Configure<UploadSettings>(
     builder.Configuration.GetSection("UploadSettings"));
 
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────
@@ -90,7 +75,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-app.UseAuthentication(); // ← WAJIB ada sebelum UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
