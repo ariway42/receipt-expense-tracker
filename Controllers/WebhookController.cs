@@ -40,6 +40,98 @@ namespace ReceiptExpenseTracker.Controllers
             return Ok("Webhook active");
         }
 
+        [HttpGet("daily-reminder")]
+        public async Task<IActionResult> DailyReminder()
+        {
+            var users = await _userManager.Users
+                .Where(x => !string.IsNullOrEmpty(x.PhoneNumberWA))
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                var today = DateTime.Today;
+
+                var hasTransaction = await _context.Transactions
+                    .AnyAsync(x =>
+                        x.UserId == user.Id &&
+                        x.TransactionDate.Date == today);
+
+                if (!hasTransaction)
+                {
+                    await SendReply(
+                        user.PhoneNumberWA!,
+                        $"👋 Halo {user.FirstName ?? "teman"},\n\n" +
+                        $"Hari ini belum ada pengeluaran yang tercatat di Finansia.\n\n" +
+                        $"Kalau ada pengeluaran hari ini, jangan lupa dicatat ya 📝"
+                    );
+                }
+            }
+
+            return Ok("Daily reminder sent");
+        }
+
+        [HttpGet("weekly-analysis")]
+        public async Task<IActionResult> WeeklyAnalysis()
+        {
+            var users = await _userManager.Users
+                .Where(x => !string.IsNullOrEmpty(x.PhoneNumberWA))
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                var startDate = DateTime.Today.AddDays(-7);
+
+                var transactions = await _context.Transactions
+                    .Where(x =>
+                        x.UserId == user.Id &&
+                        x.TransactionDate >= startDate)
+                    .ToListAsync();
+
+                if (!transactions.Any())
+                    continue;
+
+                var analysis = await AnalyzeSpendingAI(transactions);
+
+                await SendReply(
+                    user.PhoneNumberWA!,
+                    $"📊 *Analisis Mingguan Finansia*\n\n{analysis}"
+                );
+            }
+
+            return Ok("Weekly analysis sent");
+        }
+
+        [HttpGet("monthly-analysis")]
+        public async Task<IActionResult> MonthlyAnalysis()
+        {
+            var users = await _userManager.Users
+                .Where(x => !string.IsNullOrEmpty(x.PhoneNumberWA))
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                var startDate = DateTime.Today.AddMonths(-1);
+
+                var transactions = await _context.Transactions
+                    .Where(x =>
+                        x.UserId == user.Id &&
+                        x.TransactionDate >= startDate)
+                    .ToListAsync();
+
+                if (!transactions.Any())
+                    continue;
+
+                var analysis = await AnalyzeSpendingAI(transactions);
+
+                await SendReply(
+                    user.PhoneNumberWA!,
+                    $"📈 *Analisis Bulanan Finansia*\n\n{analysis}"
+                );
+            }
+
+            return Ok("Monthly analysis sent");
+        }
+
         [HttpPost("message")]
         public async Task<IActionResult> HandleMessage([FromBody] FonntteWebhookPayload payload)
         {
@@ -452,6 +544,56 @@ namespace ReceiptExpenseTracker.Controllers
                 _logger.LogError(ex, "AI parsing failed");
                 return null;
             }
+        }
+
+        private async Task<string> AnalyzeSpendingAI(List<Transaction> transactions)
+        {
+            if (!transactions.Any())
+                return "Belum ada transaksi nih. Mulai catat biar aku bisa analisis ya!";
+
+            var apiKey = _config["Groq:ApiKey"];
+            var http = _httpClientFactory.CreateClient();
+            http.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var transactionText = string.Join("\n", transactions.Select(t =>
+                $"- {t.TransactionDate:dd/MM}: {t.StoreName}, Total Rp{t.TotalAmount:N0}"
+            ));
+
+            var prompt =
+                "Kamu adalah analis keuangan pribadi.\n" +
+                "Baca data transaksi berikut dan berikan analisis sederhana:\n" +
+                transactionText + "\n\n" +
+                "Output:\n" +
+                "- Ringkas, ramah, bahasa sehari-hari\n" +
+                "- Beri tips hemat atau peringatan kalau boros\n" +
+                "- Jangan pakai format JSON, cukup text";
+
+            var requestBody = new
+            {
+                model = "meta-llama/llama-4-scout-17b-16e-instruct",
+                messages = new[]
+                {
+            new { role = "user", content = prompt }
+        },
+                temperature = 0.5,
+                max_tokens = 300
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
+            var response = await http.PostAsync(
+                "https://api.groq.com/openai/v1/chat/completions",
+                new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            );
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(responseBody);
+            var content = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "";
+
+            return content.Trim();
         }
 
         private async Task SendOtpEmail(string email, string otp)
