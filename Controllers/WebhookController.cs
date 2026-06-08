@@ -34,6 +34,12 @@ namespace ReceiptExpenseTracker.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
+        [HttpGet("message")]
+        public IActionResult HandleMessageGet()
+        {
+            return Ok("Webhook active");
+        }
+
         [HttpPost("message")]
         public async Task<IActionResult> HandleMessage([FromBody] FonntteWebhookPayload payload)
         {
