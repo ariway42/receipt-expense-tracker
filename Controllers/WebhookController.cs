@@ -91,21 +91,14 @@ namespace ReceiptExpenseTracker.Controllers
             {
                 var nama = user.FirstName ?? user.Email ?? "kamu";
                 return $"👋 Selamat datang kembali, *{nama}*!\n\n" +
-                       $"📖 *Cara pakai Finansia Bot:*\n\n" +
-                       $"🛒 *Catat pengeluaran:*\n" +
-                       $"Ketik langsung nama toko, barang, jumlah, dan harga.\n\n" +
-                       $"_Contoh:_\n" +
+                       $"🛒 *Catat pengeluaran*\n" +
                        $"• `beli di toko pak ahmad rokok surya 2 100000`\n" +
                        $"• `beli di warteg bu siti nasi ayam 15000`\n" +
                        $"• `beli di shell bensin 50000`\n\n" +
-                       $"⚙️ *Perintah tersedia:*\n" +
-                       $"• `/start` — selamat datang\n" +
-                       $"• `/help` — panduan lengkap\n" +
-                       $"• `/laporan hari ini` — pengeluaran hari ini\n" +
-                       $"• `/laporan bulan ini` — pengeluaran bulan ini\n" +
-                       $"• `/laporan tahun ini` — pengeluaran tahun ini\n\n" +
-                       $"📊 Untuk lihat laporan, edit, atau hapus transaksi:\n" +
-                       $"👉 Buka *web Finansia*";
+                       $"📦 Multi-item: pisahkan dengan *dan*\n" +
+                       $"🧾 Multi-transaksi: pisahkan dengan *,*\n\n" +
+                       $"📖 Ketik `/help` untuk panduan lengkap.\n\n" +
+                       $"👉 Detail laporan, edit & hapus transaksi tersedia di *web Finansia*";
             }
             else
             {
@@ -121,21 +114,44 @@ namespace ReceiptExpenseTracker.Controllers
         private Task<string> HandleHelp(string phone)
         {
             var msg = "📖 *Panduan Finansia Bot*\n\n" +
-                      "🛒 *Catat pengeluaran:*\n" +
-                      "`beli di [toko] [barang] [jumlah] [harga]`\n\n" +
-                      "_Contoh:_\n" +
-                      "• `beli di toko pak ahmad rokok surya 2 100000`\n" +
-                      "• `beli di warteg bu siti nasi ayam 15000`\n" +
-                      "• `beli di shell bensin 50000`\n\n" +
-                      "⚙️ *Perintah tersedia:*\n" +
-                      "• `/start` — selamat datang\n" +
-                      "• `/help` — tampilkan panduan ini\n" +
-                      "• `/laporan hari ini` — pengeluaran hari ini\n" +
-                      "• `/laporan bulan ini` — pengeluaran bulan ini\n" +
-                      "• `/laporan tahun ini` — pengeluaran tahun ini\n" +
-                      "• `/daftar email` — daftarkan nomor WA\n\n" +
-                      "📊 Untuk detail laporan, edit, atau hapus transaksi:\n" +
-                      "👉 Buka *web Finansia*";
+
+            "🛒 *Catat pengeluaran*\n" +
+            "Format:\n" +
+            "`beli di [toko] [barang] [jumlah] [harga]`\n\n" +
+
+            "_Contoh:_\n" +
+            "• `beli di toko pak ahmad rokok surya 2 100000`\n" +
+            "• `beli di warteg bu siti nasi ayam 15000`\n" +
+            "• `beli di shell bensin 50000`\n\n" +
+
+            "📦 *Multi-item* (pakai kata *dan*)\n" +
+            "• `beli di toko pak ahmad rokok surya 2 30000 dan sabun 2 40000`\n\n" +
+
+            "🧾 *Multi-transaksi* (pisahkan dengan koma)\n" +
+            "• `beli di toko pak ahmad rokok surya 2 30000, beli di toko pak ahdi ayam goreng 20000`\n\n" +
+
+            "💡 *Tips*\n" +
+            "Harga yang ditulis adalah *total yang dibayar*, bukan harga satuan.\n" +
+            "Contoh: `kopi 2 20000` berarti 2 kopi dengan total Rp20.000.\n\n" +
+
+            "⚙️ *Perintah*\n\n" +
+
+            "• `/laporan hari ini`\n" +
+            "  Lihat total pengeluaran hari ini\n\n" +
+
+            "• `/laporan bulan ini`\n" +
+            "  Lihat total pengeluaran bulan ini\n\n" +
+
+            "• `/laporan tahun ini`\n" +
+            "  Lihat total pengeluaran tahun ini\n\n" +
+
+            "• `/daftar email@gmail.com`\n" +
+            "  Hubungkan nomor WhatsApp dengan akun Finansia\n\n" +
+
+            "📊 Untuk melihat laporan lengkap, mengubah, atau menghapus transaksi:\n" +
+            "👉 Buka *web Finansia*\n\n" +
+
+            "🙏 Terima kasih sudah menggunakan *Finansia Bot*. Semoga pencatatan keuangan jadi lebih mudah!";
 
             return Task.FromResult(msg);
         }
@@ -231,7 +247,9 @@ namespace ReceiptExpenseTracker.Controllers
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
-                return "Email tidak terdaftar. Daftar dulu di web ya!";
+                return "❌ Email tidak ditemukan.\n\n" +
+           "Silakan daftar akun terlebih dahulu di web Finansia, lalu ulangi:\n\n" +
+           "`/daftar email@gmail.com`";
 
             var existingPhone = await _userManager.Users
                 .FirstOrDefaultAsync(u => u.PhoneNumberWA == phone);
@@ -257,7 +275,7 @@ namespace ReceiptExpenseTracker.Controllers
 
             await SendOtpEmail(email, otp);
 
-            return $"Kode OTP telah dikirim ke {email}. Ketik /verifikasi KODE untuk konfirmasi. Kode berlaku 10 menit.";
+            return $"Kode OTP telah dikirim ke {email}. Ketik:\n`/verifikasi 123456`\nuntuk konfirmasi. Kode berlaku 10 menit.";
         }
 
         private async Task<string> HandleVerify(string phone, string code)
@@ -300,32 +318,48 @@ namespace ReceiptExpenseTracker.Controllers
             if (user == null)
                 return "Kamu belum terdaftar. Ketik /daftar email@kamu.com untuk daftar.";
 
-            var parsed = await ParseTransactionWithAI(message);
-            if (parsed == null)
-                return "Tidak bisa memproses pesanmu.\n\nFormat yang benar:\n*beli di [toko] [barang] [jumlah] [total harga]*\n\nContoh:\n• `beli di toko pak ahmad rokok surya 2 100000`\n• `beli di warteg bu siti nasi ayam 1 15000`\n• `beli di shell bensin 50000`";
+            var segments = message.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var transaction = new Transaction
+            var replies = new List<string>();
+            foreach (var segment in segments)
             {
-                StoreName = parsed.StoreName,
-                TotalAmount = parsed.Amount,
-                TransactionDate = DateTime.Today,
-                UserId = user.Id,
-                CreatedDate = DateTime.UtcNow,
-                TransactionItems = new List<TransactionItem>
+                var parsed = await ParseTransactionWithAI(segment);
+                if (parsed == null)
                 {
-                    new TransactionItem
-                    {
-                        ItemName = parsed.ItemName,
-                        Price = parsed.Amount / parsed.Quantity,
-                        Quantity = parsed.Quantity
-                    }
+                    replies.Add(
+                                 $"⚠️ Tidak bisa memahami transaksi:\n" +
+                                 $"`{segment}`\n\n" +
+                                 $"Contoh:\n" +
+                                 $"`beli di warteg nasi ayam 15000`"
+                             );
+                    continue;
                 }
-            };
 
-            _context.Transactions.Add(transaction);
+                var totalAmount = parsed.Items.Sum(i => i.Amount);
+                var transaction = new Transaction
+                {
+                    StoreName = parsed.StoreName,
+                    TotalAmount = totalAmount,
+                    TransactionDate = DateTime.Today,
+                    UserId = user.Id,
+                    CreatedDate = DateTime.UtcNow,
+                    TransactionItems = parsed.Items.Select(i => new TransactionItem
+                    {
+                        ItemName = i.ItemName,
+                        Price = i.Amount / i.Quantity,
+                        Quantity = i.Quantity
+                    }).ToList()
+                };
+
+                _context.Transactions.Add(transaction);
+
+                var itemLines = string.Join("\n", parsed.Items.Select(i => $"  🛒 {i.ItemName} x{i.Quantity} — Rp{i.Amount:N0}"));
+                replies.Add($"✅ *{parsed.StoreName}*\n{itemLines}\n  💰 Total: Rp{totalAmount:N0}");
+            }
+
             await _context.SaveChangesAsync();
 
-            return $"✅ Transaksi tersimpan!\n📍 {parsed.StoreName}\n🛒 {parsed.ItemName} x{parsed.Quantity}\n💰 Rp{parsed.Amount:N0}\n\n_Untuk edit atau hapus, buka web Finansia._";
+            return string.Join("\n\n", replies) + "\n\n_Untuk edit atau hapus, buka web Finansia._";
         }
 
         private async Task<ParsedTransaction?> ParseTransactionWithAI(string message)
@@ -337,23 +371,24 @@ namespace ReceiptExpenseTracker.Controllers
                 http.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
                 var prompt = "Kamu adalah parser transaksi keuangan. Ekstrak data dari pesan berikut.\n" +
-              "Kembalikan HANYA JSON valid, tanpa penjelasan, tanpa markdown.\n\n" +
-              "Jika pesan BUKAN transaksi pembelian, kembalikan: {\"is_transaction\": false}\n\n" +
-              "Jika pesan adalah transaksi, kembalikan:\n" +
-              "{\n" +
-              "  \"is_transaction\": true,\n" +
-              "  \"item_name\": \"nama barang/jasa\",\n" +
-              "  \"store_name\": \"nama toko/tempat\",\n" +
-              "  \"quantity\": 1,\n" +
-              "  \"total_amount\": 20000\n" +
-              "}\n\n" +
-              "Aturan:\n" +
-              "- Harga yang disebutkan user = TOTAL yang dibayar, bukan harga satuan\n" +
-              "- quantity default 1 jika tidak disebutkan\n" +
-              "- Jika harga tidak disebutkan sama sekali, return is_transaction: false\n" +
-              "- Jika bukan transaksi pembelian, return is_transaction: false\n" +
-              "- store_name = Tidak diketahui jika tidak disebutkan\n\n" +
-              $"Pesan: {message}";
+                  "Kembalikan HANYA JSON valid, tanpa penjelasan, tanpa markdown.\n\n" +
+                  "Jika pesan BUKAN transaksi pembelian, kembalikan: {\"is_transaction\": false}\n\n" +
+                  "Jika pesan adalah transaksi, kembalikan:\n" +
+                  "{\n" +
+                  "  \"is_transaction\": true,\n" +
+                  "  \"store_name\": \"nama toko/tempat\",\n" +
+                  "  \"items\": [\n" +
+                  "    { \"item_name\": \"nama barang\", \"quantity\": 1, \"total_amount\": 20000 }\n" +
+                  "  ]\n" +
+                  "}\n\n" +
+                  "Aturan:\n" +
+                  "- Satu transaksi bisa punya BANYAK item, dipisah kata 'dan'\n" +
+                  "- Harga yang disebutkan user = TOTAL per item yang dibayar, bukan harga satuan\n" +
+                  "- quantity default 1 jika tidak disebutkan\n" +
+                  "- Jika harga tidak disebutkan sama sekali, return is_transaction: false\n" +
+                  "- Jika bukan transaksi pembelian, return is_transaction: false\n" +
+                  "- store_name = 'Tidak diketahui' jika tidak disebutkan\n\n" +
+                  $"Pesan: {message}";
 
                 var requestBody = new
                 {
@@ -363,7 +398,7 @@ namespace ReceiptExpenseTracker.Controllers
                         new { role = "user", content = prompt }
                     },
                     temperature = 0,
-                    max_tokens = 256
+                    max_tokens = 512
                 };
 
                 var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
@@ -389,19 +424,27 @@ namespace ReceiptExpenseTracker.Controllers
                     isTx.ValueKind == System.Text.Json.JsonValueKind.False)
                     return null;
 
-                var itemName = root.TryGetProperty("item_name", out var i) ? i.GetString() ?? "Item" : "Item";
                 var storeName = root.TryGetProperty("store_name", out var s) ? s.GetString() ?? "Tidak diketahui" : "Tidak diketahui";
-                var qty = root.TryGetProperty("quantity", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Number ? (int)q.GetDecimal() : 1;
-                var total = root.TryGetProperty("total_amount", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.Number ? t.GetDecimal() : 0;
 
-                if (total <= 0) return null;
+                if (!root.TryGetProperty("items", out var itemsEl) || itemsEl.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    return null;
+
+                var items = new List<TransactionItemParsed>();
+                foreach (var el in itemsEl.EnumerateArray())
+                {
+                    var itemName = el.TryGetProperty("item_name", out var i) ? i.GetString() ?? "Item" : "Item";
+                    var qty = el.TryGetProperty("quantity", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Number ? (int)q.GetDecimal() : 1;
+                    var total = el.TryGetProperty("total_amount", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.Number ? t.GetDecimal() : 0;
+                    if (total > 0)
+                        items.Add(new TransactionItemParsed { ItemName = itemName, Quantity = qty, Amount = total });
+                }
+
+                if (!items.Any()) return null;
 
                 return new ParsedTransaction
                 {
-                    ItemName = itemName,
                     StoreName = storeName,
-                    Quantity = qty,
-                    Amount = total
+                    Items = items
                 };
             }
             catch (Exception ex)
@@ -453,6 +496,11 @@ namespace ReceiptExpenseTracker.Controllers
     public class ParsedTransaction
     {
         public string StoreName { get; set; } = string.Empty;
+        public List<TransactionItemParsed> Items { get; set; } = new();
+    }
+
+    public class TransactionItemParsed
+    {
         public string ItemName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public int Quantity { get; set; } = 1;
