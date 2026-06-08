@@ -51,7 +51,19 @@ namespace ReceiptExpenseTracker.Controllers
 
             string reply;
 
-            if (message.StartsWith("/daftar "))
+            if (message.Equals("/start", StringComparison.OrdinalIgnoreCase))
+            {
+                reply = await HandleStart(phone);
+            }
+            else if (message.Equals("/help", StringComparison.OrdinalIgnoreCase))
+            {
+                reply = await HandleHelp(phone);
+            }
+            else if (message.StartsWith("/laporan", StringComparison.OrdinalIgnoreCase))
+            {
+                reply = await HandleLaporan(phone, message);
+            }
+            else if (message.StartsWith("/daftar "))
             {
                 var email = message.Substring(8).Trim();
                 reply = await HandleRegister(phone, email);
@@ -68,6 +80,129 @@ namespace ReceiptExpenseTracker.Controllers
 
             await SendReply(phone, reply);
             return Ok();
+        }
+
+        private async Task<string> HandleStart(string phone)
+        {
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumberWA == phone);
+
+            if (user != null)
+            {
+                var nama = user.FirstName ?? user.Email ?? "kamu";
+                return $"👋 Selamat datang kembali, *{nama}*!\n\n" +
+                       $"📖 *Cara pakai Finansia Bot:*\n\n" +
+                       $"🛒 *Catat pengeluaran:*\n" +
+                       $"Ketik langsung nama toko, barang, jumlah, dan harga.\n\n" +
+                       $"_Contoh:_\n" +
+                       $"• `beli di toko pak ahmad rokok surya 2 100000`\n" +
+                       $"• `beli di warteg bu siti nasi ayam 15000`\n" +
+                       $"• `beli di shell bensin 50000`\n\n" +
+                       $"⚙️ *Perintah tersedia:*\n" +
+                       $"• `/start` — selamat datang\n" +
+                       $"• `/help` — panduan lengkap\n" +
+                       $"• `/laporan hari ini` — pengeluaran hari ini\n" +
+                       $"• `/laporan bulan ini` — pengeluaran bulan ini\n" +
+                       $"• `/laporan tahun ini` — pengeluaran tahun ini\n\n" +
+                       $"📊 Untuk lihat laporan, edit, atau hapus transaksi:\n" +
+                       $"👉 Buka *web Finansia*";
+            }
+            else
+            {
+                return $"👋 Halo! Selamat datang di *Finansia Bot*!\n\n" +
+                       $"Bot ini membantu kamu mencatat pengeluaran langsung lewat WhatsApp.\n\n" +
+                       $"Untuk mulai, daftarkan nomor kamu dulu:\n\n" +
+                       $"📧 Ketik:\n" +
+                       $"`/daftar emailkamu@gmail.com`\n\n" +
+                       $"_Pastikan email yang kamu daftarkan sudah terdaftar di web Finansia ya!_";
+            }
+        }
+
+        private Task<string> HandleHelp(string phone)
+        {
+            var msg = "📖 *Panduan Finansia Bot*\n\n" +
+                      "🛒 *Catat pengeluaran:*\n" +
+                      "`beli di [toko] [barang] [jumlah] [harga]`\n\n" +
+                      "_Contoh:_\n" +
+                      "• `beli di toko pak ahmad rokok surya 2 100000`\n" +
+                      "• `beli di warteg bu siti nasi ayam 15000`\n" +
+                      "• `beli di shell bensin 50000`\n\n" +
+                      "⚙️ *Perintah tersedia:*\n" +
+                      "• `/start` — selamat datang\n" +
+                      "• `/help` — tampilkan panduan ini\n" +
+                      "• `/laporan hari ini` — pengeluaran hari ini\n" +
+                      "• `/laporan bulan ini` — pengeluaran bulan ini\n" +
+                      "• `/laporan tahun ini` — pengeluaran tahun ini\n" +
+                      "• `/daftar email` — daftarkan nomor WA\n\n" +
+                      "📊 Untuk detail laporan, edit, atau hapus transaksi:\n" +
+                      "👉 Buka *web Finansia*";
+
+            return Task.FromResult(msg);
+        }
+
+        private async Task<string> HandleLaporan(string phone, string message)
+        {
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumberWA == phone);
+
+            if (user == null)
+                return "Kamu belum terdaftar. Ketik /daftar email@kamu.com untuk daftar.";
+
+            var now = DateTime.UtcNow;
+            DateTime startDate;
+            string periodLabel;
+
+            var cmd = message.Trim().ToLower();
+
+            if (cmd == "/laporan hari ini" || cmd == "/laporan harian")
+            {
+                startDate = now.Date;
+                periodLabel = $"Hari Ini ({now:dd MMMM yyyy})";
+            }
+            else if (cmd == "/laporan bulan ini" || cmd == "/laporan bulanan" || cmd == "/laporan")
+            {
+                startDate = new DateTime(now.Year, now.Month, 1);
+                periodLabel = $"{now:MMMM yyyy}";
+            }
+            else if (cmd == "/laporan tahun ini" || cmd == "/laporan tahunan")
+            {
+                startDate = new DateTime(now.Year, 1, 1);
+                periodLabel = $"Tahun {now.Year}";
+            }
+            else
+            {
+                return "Format tidak dikenali.\n\nGunakan:\n• `/laporan hari ini`\n• `/laporan bulan ini`\n• `/laporan tahun ini`";
+            }
+
+            var transactions = await _context.Transactions
+                .Where(t => t.UserId == user.Id && t.TransactionDate >= startDate)
+                .OrderByDescending(t => t.TransactionDate)
+                .ToListAsync();
+
+            if (!transactions.Any())
+                return $"📊 Belum ada transaksi untuk periode *{periodLabel}*.";
+
+            var total = transactions.Sum(t => t.TotalAmount);
+            var jumlah = transactions.Count;
+
+            var topToko = transactions
+                .GroupBy(t => t.StoreName)
+                .OrderByDescending(g => g.Sum(t => t.TotalAmount))
+                .Take(3)
+                .Select(g => $"• {g.Key}: Rp{g.Sum(t => t.TotalAmount):N0}")
+                .ToList();
+
+            var recent = transactions
+                .Take(3)
+                .Select(t => $"• {t.TransactionDate:dd/MM} {t.StoreName}: Rp{t.TotalAmount:N0}")
+                .ToList();
+
+            return $"📊 *Laporan {periodLabel}*\n\n" +
+                   $"💰 Total: *Rp{total:N0}*\n" +
+                   $"🧾 Transaksi: *{jumlah}x*\n\n" +
+                   $"🏪 *Toko terbanyak:*\n{string.Join("\n", topToko)}\n\n" +
+                   $"🕐 *Transaksi terakhir:*\n{string.Join("\n", recent)}\n\n" +
+                   $"👉 Detail lengkap di *web Finansia*";
         }
 
         private async Task SendReply(string phone, string message)
@@ -148,7 +283,13 @@ namespace ReceiptExpenseTracker.Controllers
             otp.IsUsed = true;
             await _context.SaveChangesAsync();
 
-            return $"Berhasil terdaftar! Selamat datang {user.FirstName ?? user.Email}!\n\nKamu bisa mulai catat pengeluaran, contoh:\nbeli rokok surya toko pak ahmad 2 100000\n\n_Untuk edit atau hapus transaksi, buka web Finansia._";
+            return $"✅ Berhasil terdaftar! Selamat datang *{user.FirstName ?? user.Email}*!\n\n" +
+                   $"Kamu bisa mulai catat pengeluaran:\n\n" +
+                   $"_Contoh:_\n" +
+                   $"• `beli di toko pak ahmad rokok surya 2 100000`\n" +
+                   $"• `beli di warteg bu siti nasi ayam 1 15000`\n\n" +
+                   $"Ketik `/help` untuk panduan lengkap.\n\n" +
+                   $"_Untuk edit atau hapus transaksi, buka web Finansia._";
         }
 
         private async Task<string> HandleTransaction(string phone, string message)
@@ -161,7 +302,7 @@ namespace ReceiptExpenseTracker.Controllers
 
             var parsed = await ParseTransactionWithAI(message);
             if (parsed == null)
-                return "Tidak bisa memproses pesanmu. Pastikan menyebutkan nama barang, toko, jumlah, dan total harga.\n\nContoh:\nbeli rokok surya toko pak ahmad 2 100000";
+                return "Tidak bisa memproses pesanmu.\n\nFormat yang benar:\n*beli di [toko] [barang] [jumlah] [total harga]*\n\nContoh:\n• `beli di toko pak ahmad rokok surya 2 100000`\n• `beli di warteg bu siti nasi ayam 1 15000`\n• `beli di shell bensin 50000`";
 
             var transaction = new Transaction
             {
