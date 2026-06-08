@@ -148,7 +148,7 @@ namespace ReceiptExpenseTracker.Controllers
             otp.IsUsed = true;
             await _context.SaveChangesAsync();
 
-            return $"Berhasil terdaftar! Selamat datang {user.FirstName ?? user.Email}!\n\nKamu bisa mulai catat pengeluaran dengan format:\n*beli [item] [toko] [jumlah] [harga]*\n\nContoh:\nbeli nasi warung pak indro 2 20000";
+            return $"Berhasil terdaftar! Selamat datang {user.FirstName ?? user.Email}!\n\nKamu bisa mulai catat pengeluaran, contoh:\nbeli rokok surya toko pak ahmad 2 100000\n\n_Untuk edit atau hapus transaksi, buka web Finansia._";
         }
 
         private async Task<string> HandleTransaction(string phone, string message)
@@ -159,9 +159,9 @@ namespace ReceiptExpenseTracker.Controllers
             if (user == null)
                 return "Kamu belum terdaftar. Ketik /daftar email@kamu.com untuk daftar.";
 
-            var parsed = ParseTransactionMessage(message);
+            var parsed = await ParseTransactionWithAI(message);
             if (parsed == null)
-                return "Format tidak dikenali.\n\nFormat yang benar:\n*beli [item] [toko] [jumlah] [harga]*\n\nContoh:\nbeli nasi warung pak indro 2 20000";
+                return "Tidak bisa memproses pesanmu. Pastikan menyebutkan nama barang, toko, jumlah, dan total harga.\n\nContoh:\nbeli rokok surya toko pak ahmad 2 100000";
 
             var transaction = new Transaction
             {
@@ -184,33 +184,90 @@ namespace ReceiptExpenseTracker.Controllers
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
-            return $"✅ Transaksi tersimpan!\n📍 {parsed.StoreName}\n🛒 {parsed.ItemName} x{parsed.Quantity}\n💰 Rp{parsed.Amount:N0}";
+            return $"✅ Transaksi tersimpan!\n📍 {parsed.StoreName}\n🛒 {parsed.ItemName} x{parsed.Quantity}\n💰 Rp{parsed.Amount:N0}\n\n_Untuk edit atau hapus, buka web Finansia._";
         }
 
-        private ParsedTransaction? ParseTransactionMessage(string message)
+        private async Task<ParsedTransaction?> ParseTransactionWithAI(string message)
         {
-            // Format: beli [item] [toko] [jumlah] [harga]
-            // Contoh: beli nasi warung pak indro 2 20000
-            var pattern = @"^beli\s+(.+?)\s+(.+?)\s+(\d+)\s+([\d.,]+)$";
-            var match = System.Text.RegularExpressions.Regex.Match(
-                message, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-            if (!match.Success) return null;
-
-            var itemName = match.Groups[1].Value.Trim();
-            var storeName = match.Groups[2].Value.Trim();
-            var qty = int.TryParse(match.Groups[3].Value, out var q) ? q : 1;
-            var amountStr = match.Groups[4].Value.Replace(".", "").Replace(",", "");
-
-            if (!decimal.TryParse(amountStr, out var amount)) return null;
-
-            return new ParsedTransaction
+            try
             {
-                ItemName = itemName,
-                StoreName = storeName,
-                Quantity = qty,
-                Amount = amount * qty
-            };
+                var apiKey = _config["Groq:ApiKey"];
+                var http = _httpClientFactory.CreateClient();
+                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+                var prompt = "Kamu adalah parser transaksi keuangan. Ekstrak data dari pesan berikut.\n" +
+              "Kembalikan HANYA JSON valid, tanpa penjelasan, tanpa markdown.\n\n" +
+              "Jika pesan BUKAN transaksi pembelian, kembalikan: {\"is_transaction\": false}\n\n" +
+              "Jika pesan adalah transaksi, kembalikan:\n" +
+              "{\n" +
+              "  \"is_transaction\": true,\n" +
+              "  \"item_name\": \"nama barang/jasa\",\n" +
+              "  \"store_name\": \"nama toko/tempat\",\n" +
+              "  \"quantity\": 1,\n" +
+              "  \"total_amount\": 20000\n" +
+              "}\n\n" +
+              "Aturan:\n" +
+              "- Harga yang disebutkan user = TOTAL yang dibayar, bukan harga satuan\n" +
+              "- quantity default 1 jika tidak disebutkan\n" +
+              "- Jika harga tidak disebutkan sama sekali, return is_transaction: false\n" +
+              "- Jika bukan transaksi pembelian, return is_transaction: false\n" +
+              "- store_name = Tidak diketahui jika tidak disebutkan\n\n" +
+              $"Pesan: {message}";
+
+                var requestBody = new
+                {
+                    model = "meta-llama/llama-4-scout-17b-16e-instruct",
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0,
+                    max_tokens = 256
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
+                var response = await http.PostAsync(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                );
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(responseBody);
+                var content = doc.RootElement
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString() ?? "";
+
+                content = System.Text.RegularExpressions.Regex.Replace(content, @"```json|```", "").Trim();
+
+                using var parsedDoc = System.Text.Json.JsonDocument.Parse(content);
+                var root = parsedDoc.RootElement;
+
+                if (root.TryGetProperty("is_transaction", out var isTx) &&
+                    isTx.ValueKind == System.Text.Json.JsonValueKind.False)
+                    return null;
+
+                var itemName = root.TryGetProperty("item_name", out var i) ? i.GetString() ?? "Item" : "Item";
+                var storeName = root.TryGetProperty("store_name", out var s) ? s.GetString() ?? "Tidak diketahui" : "Tidak diketahui";
+                var qty = root.TryGetProperty("quantity", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Number ? (int)q.GetDecimal() : 1;
+                var total = root.TryGetProperty("total_amount", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.Number ? t.GetDecimal() : 0;
+
+                if (total <= 0) return null;
+
+                return new ParsedTransaction
+                {
+                    ItemName = itemName,
+                    StoreName = storeName,
+                    Quantity = qty,
+                    Amount = total
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "AI parsing failed");
+                return null;
+            }
         }
 
         private async Task SendOtpEmail(string email, string otp)
