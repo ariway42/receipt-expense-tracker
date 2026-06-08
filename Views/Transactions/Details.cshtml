@@ -138,7 +138,7 @@
                         <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                             <div class="overflow-hidden me-2">
                                <div class="fw-medium">@item.ItemName</div>
-                                <div class="text-muted small">Qty: @item.Quantity × @item.Price.ToString("C0", new System.Globalization.CultureInfo("id-ID"))</div>
+                               <div class="text-muted small">@item.Quantity &times; @item.Price.ToString("C0", new System.Globalization.CultureInfo("id-ID"))</div>
                             </div>
                             <div class="fw-semibold flex-shrink-0 text-primary">
                                 @item.LineTotal.ToString("C0", new System.Globalization.CultureInfo("id-ID"))
