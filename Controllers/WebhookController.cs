@@ -40,6 +40,13 @@ namespace ReceiptExpenseTracker.Controllers
             return Ok("Webhook active");
         }
 
+        [HttpGet("test-wa")]
+        public async Task<IActionResult> TestWA()
+        {
+            await SendReply("6289503617887", "🔥 TEST CRON FINANSIA BERHASIL");
+            return Ok("sent");
+        }
+
         [HttpGet("daily-reminder")]
         public async Task<IActionResult> DailyReminder()
         {
