@@ -12,6 +12,7 @@ namespace ReceiptExpenseTracker.Data
 
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<TransactionItem> TransactionItems { get; set; }
+        public DbSet<WaOtp> WaOtps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
