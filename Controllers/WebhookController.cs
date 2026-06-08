@@ -148,7 +148,7 @@ namespace ReceiptExpenseTracker.Controllers
             otp.IsUsed = true;
             await _context.SaveChangesAsync();
 
-            return $"Berhasil terdaftar! Selamat datang {user.FirstName ?? user.Email}! Kamu bisa mulai catat pengeluaran. Contoh: beli makan di warung pak indro 20000";
+            return $"Berhasil terdaftar! Selamat datang {user.FirstName ?? user.Email}!\n\nKamu bisa mulai catat pengeluaran dengan format:\n*beli [item] [toko] [jumlah] [harga]*\n\nContoh:\nbeli nasi warung pak indro 2 20000";
         }
 
         private async Task<string> HandleTransaction(string phone, string message)
@@ -161,7 +161,7 @@ namespace ReceiptExpenseTracker.Controllers
 
             var parsed = ParseTransactionMessage(message);
             if (parsed == null)
-                return "Format tidak dikenali. Contoh: beli makan di warung pak indro 20000";
+                return "Format tidak dikenali.\n\nFormat yang benar:\n*beli [item] [toko] [jumlah] [harga]*\n\nContoh:\nbeli nasi warung pak indro 2 20000";
 
             var transaction = new Transaction
             {
@@ -175,8 +175,8 @@ namespace ReceiptExpenseTracker.Controllers
                     new TransactionItem
                     {
                         ItemName = parsed.ItemName,
-                        Price = parsed.Amount,
-                        Quantity = 1
+                        Price = parsed.Amount / parsed.Quantity,
+                        Quantity = parsed.Quantity
                     }
                 }
             };
@@ -184,12 +184,14 @@ namespace ReceiptExpenseTracker.Controllers
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
-            return $"✅ Transaksi tersimpan!\n📍 {parsed.StoreName}\n🛒 {parsed.ItemName}\n💰 Rp{parsed.Amount:N0}";
+            return $"✅ Transaksi tersimpan!\n📍 {parsed.StoreName}\n🛒 {parsed.ItemName} x{parsed.Quantity}\n💰 Rp{parsed.Amount:N0}";
         }
 
         private ParsedTransaction? ParseTransactionMessage(string message)
         {
-            var pattern = @"(?:beli\s+)?(.+?)\s+di\s+(.+?)\s+([\d.,]+)$";
+            // Format: beli [item] [toko] [jumlah] [harga]
+            // Contoh: beli nasi warung pak indro 2 20000
+            var pattern = @"^beli\s+(.+?)\s+(.+?)\s+(\d+)\s+([\d.,]+)$";
             var match = System.Text.RegularExpressions.Regex.Match(
                 message, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
@@ -197,7 +199,8 @@ namespace ReceiptExpenseTracker.Controllers
 
             var itemName = match.Groups[1].Value.Trim();
             var storeName = match.Groups[2].Value.Trim();
-            var amountStr = match.Groups[3].Value.Replace(".", "").Replace(",", "");
+            var qty = int.TryParse(match.Groups[3].Value, out var q) ? q : 1;
+            var amountStr = match.Groups[4].Value.Replace(".", "").Replace(",", "");
 
             if (!decimal.TryParse(amountStr, out var amount)) return null;
 
@@ -205,7 +208,8 @@ namespace ReceiptExpenseTracker.Controllers
             {
                 ItemName = itemName,
                 StoreName = storeName,
-                Amount = amount
+                Quantity = qty,
+                Amount = amount * qty
             };
         }
 
@@ -253,5 +257,6 @@ namespace ReceiptExpenseTracker.Controllers
         public string StoreName { get; set; } = string.Empty;
         public string ItemName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
+        public int Quantity { get; set; } = 1;
     }
 }
