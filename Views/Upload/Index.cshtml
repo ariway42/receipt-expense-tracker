@@ -176,7 +176,17 @@
             if (file && file.type.startsWith('image/')) handleFile(file);
         });
 
-               dropZone.addEventListener('click', (e) => {
+         let cameraClicked = false;
+
+        cameraBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cameraClicked = true;
+            cameraInput.click();
+            setTimeout(() => cameraClicked = false, 500);
+        });
+
+        dropZone.addEventListener('click', (e) => {
+            if (cameraClicked) return;
             if (!e.target.closest('#previewContainer') &&
                 !e.target.closest('#processingIndicator') &&
                 !e.target.closest('#actionButtons')) {
@@ -184,7 +194,7 @@
             }
         });
         browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
-        cameraBtn.addEventListener('click', (e) => { e.stopPropagation(); cameraInput.click(); });
+        // cameraBtn.addEventListener('click', (e) => { e.stopPropagation(); cameraInput.click(); });
         fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
         cameraInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
         removeImageBtn.addEventListener('click', resetUpload);

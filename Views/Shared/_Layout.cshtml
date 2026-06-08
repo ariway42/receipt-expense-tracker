@@ -306,6 +306,174 @@
         @@keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+        }
+
+            body.dark-mode .sidebar {
+                background: #1e293b;
+                border-color: #334155;
+            }
+
+            body.dark-mode .sidebar-brand h1 {
+                background: linear-gradient(135deg, #60a5fa, #22d3ee);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            body.dark-mode .nav-link {
+                color: #94a3b8;
+            }
+
+                body.dark-mode .nav-link:hover {
+                    background: #334155;
+                    color: #60a5fa;
+                }
+
+            body.dark-mode .card-custom,
+            body.dark-mode .stat-card,
+            body.dark-mode .filter-bar {
+                background: #1e293b;
+                border-color: #334155;
+                color: #e2e8f0;
+            }
+
+                body.dark-mode .card-custom .card-header {
+                    border-color: #334155;
+                }
+
+            body.dark-mode .text-dark {
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode .text-muted {
+                color: #94a3b8 !important;
+            }
+
+            body.dark-mode .table-custom th,
+            body.dark-mode .table-custom td {
+                color: #e2e8f0;
+                border-color: #334155;
+            }
+
+            body.dark-mode .form-control,
+            body.dark-mode .form-select {
+                background: #334155;
+                border-color: #475569;
+                color: #e2e8f0;
+            }
+
+            body.dark-mode .mobile-header {
+                background: #1e293b;
+                border-color: #334155;
+            }
+
+            body.dark-mode .user-menu {
+                background: #1e293b;
+                border-color: #334155;
+            }
+
+            body.dark-mode .badge.bg-light {
+                background: #334155 !important;
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode .table {
+                color: #e2e8f0;
+            }
+
+                body.dark-mode .table > :not(caption) > * > * {
+                    background-color: #1e293b;
+                    color: #e2e8f0;
+                    border-color: #334155;
+                }
+
+            body.dark-mode .table-hover > tbody > tr:hover > * {
+                background-color: #334155;
+            }
+
+            body.dark-mode .btn-outline-primary {
+                color: #60a5fa;
+                border-color: #60a5fa;
+            }
+
+            body.dark-mode .btn-outline-warning {
+                color: #fbbf24;
+                border-color: #fbbf24;
+            }
+
+            body.dark-mode .btn-outline-danger {
+                color: #f87171;
+                border-color: #f87171;
+            }
+
+            body.dark-mode .btn-outline-secondary {
+                color: #94a3b8;
+                border-color: #475569;
+            }
+
+            body.dark-mode .fw-medium,
+            body.dark-mode .fw-semibold,
+            body.dark-mode .fw-bold {
+                color: #e2e8f0;
+            }
+
+            body.dark-mode tr td {
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode .btn-light {
+                background: #334155 !important;
+                color: #e2e8f0 !important;
+                border-color: #475569 !important;
+            }
+
+            body.dark-mode .dropdown-menu {
+                background: #1e293b;
+                border-color: #334155;
+            }
+
+            body.dark-mode .dropdown-item {
+                color: #e2e8f0;
+            }
+
+                body.dark-mode .dropdown-item:hover {
+                    background: #334155;
+                    color: #e2e8f0;
+                }
+
+            body.dark-mode .dropdown-divider {
+                border-color: #334155;
+            }
+
+            body.dark-mode .period-btn {
+                background: #1e293b !important;
+                border-color: #475569 !important;
+                color: #94a3b8 !important;
+            }
+
+                body.dark-mode .period-btn:hover {
+                    border-color: #60a5fa !important;
+                    color: #60a5fa !important;
+                    background: #334155 !important;
+                }
+
+                body.dark-mode .period-btn.active {
+                    background: var(--primary-gradient) !important;
+                    color: white !important;
+                    border-color: transparent !important;
+                }
+
+            body.dark-mode .input-group-text {
+                background: #334155 !important;
+                border-color: #475569 !important;
+                color: #94a3b8 !important;
+            }
+
+            body.dark-mode .form-control::placeholder {
+                color: #64748b;
+            }
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -315,7 +483,7 @@
         <button class="btn btn-link text-dark p-0" id="sidebarToggle">
             <i class="bi bi-list fs-4"></i>
         </button>
-        <span class="fw-semibold ms-2">Finansia</span>
+        <span class="fw-semibold" style="margin-top: 5px;  margin-left: 7px;">Finansia</span>
         <div style="width: 40px;"></div>
     </div>
 
@@ -363,6 +531,12 @@
                         <i class="bi bi-gear-fill"></i>
                         <span>Pengaturan</span>
                     </a>
+                </li>
+                <li class="nav-item mt-1">
+                    <button class="nav-link w-100 border-0 bg-transparent" id="darkModeToggle">
+                        <i class="bi bi-moon-fill" id="darkModeIcon"></i>
+                        <span id="darkModeText">Mode Malam</span>
+                    </button>
                 </li>
             </ul>
         </nav>
@@ -433,6 +607,34 @@
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.getElementById('sidebar')?.classList.add('collapsed');
         }
+    </script>
+
+    <script>
+                // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const darkModeIcon = document.getElementById('darkModeIcon');
+        const darkModeText = document.getElementById('darkModeText');
+
+        function applyDarkMode(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                darkModeIcon.className = 'bi bi-sun-fill';
+                darkModeText.textContent = 'Mode Terang';
+            } else {
+                document.body.classList.remove('dark-mode');
+                darkModeIcon.className = 'bi bi-moon-fill';
+                darkModeText.textContent = 'Mode Malam';
+            }
+        }
+
+        // Restore on load
+        applyDarkMode(localStorage.getItem('darkMode') === 'true');
+
+        darkModeToggle?.addEventListener('click', function() {
+            const isDark = !document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            applyDarkMode(isDark);
+        });
     </script>
 </body>
 </html>
