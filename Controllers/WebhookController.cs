@@ -18,17 +18,20 @@ namespace ReceiptExpenseTracker.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
         private readonly ILogger<WebhookController> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public WebhookController(
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext context,
             IConfiguration config,
-            ILogger<WebhookController> logger)
+            ILogger<WebhookController> logger,
+            IHttpClientFactory httpClientFactory)
         {
             _userManager = userManager;
             _context = context;
             _config = config;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpPost("message")]
@@ -38,49 +41,69 @@ namespace ReceiptExpenseTracker.Controllers
             var message = payload.Message?.Trim() ?? "";
 
             if (string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(message))
-                return Ok(new { reply = "" });
+                return Ok();
 
-            // /daftar email@example.com
+            string reply;
+
             if (message.StartsWith("/daftar "))
             {
                 var email = message.Substring(8).Trim();
-                return Ok(new { reply = await HandleRegister(phone, email) });
+                reply = await HandleRegister(phone, email);
             }
-
-            // /verifikasi 123456
-            if (message.StartsWith("/verifikasi "))
+            else if (message.StartsWith("/verifikasi "))
             {
                 var code = message.Substring(12).Trim();
-                return Ok(new { reply = await HandleVerify(phone, code) });
+                reply = await HandleVerify(phone, code);
+            }
+            else
+            {
+                reply = await HandleTransaction(phone, message);
             }
 
-            // Transaksi biasa
-            return Ok(new { reply = await HandleTransaction(phone, message) });
+            await SendReply(phone, reply);
+            return Ok();
+        }
+
+        private async Task SendReply(string phone, string message)
+        {
+            try
+            {
+                var token = _config["Fonnte:Token"];
+                var http = _httpClientFactory.CreateClient();
+                http.DefaultRequestHeaders.Add("Authorization", token);
+
+                var content = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("target", phone),
+                    new KeyValuePair<string, string>("message", message),
+                });
+
+                await http.PostAsync("https://api.fonnte.com/send", content);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send reply to {phone}", phone);
+            }
         }
 
         private async Task<string> HandleRegister(string phone, string email)
         {
-            // Cek email terdaftar di web
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 return "Email tidak terdaftar. Daftar dulu di web ya!";
 
-            // Cek nomor WA sudah terdaftar
             var existingPhone = await _userManager.Users
                 .FirstOrDefaultAsync(u => u.PhoneNumberWA == phone);
             if (existingPhone != null)
                 return "Nomor kamu sudah terdaftar!";
 
-            // Cek email sudah dipakai nomor WA lain
             if (!string.IsNullOrEmpty(user.PhoneNumberWA))
                 return "Email ini sudah terdaftar di nomor lain!";
 
-            // Hapus OTP lama jika ada
             var oldOtps = _context.WaOtps
                 .Where(o => o.PhoneNumber == phone && !o.IsUsed);
             _context.WaOtps.RemoveRange(oldOtps);
 
-            // Generate OTP
             var otp = new Random().Next(100000, 999999).ToString();
             _context.WaOtps.Add(new WaOtp
             {
@@ -91,7 +114,6 @@ namespace ReceiptExpenseTracker.Controllers
             });
             await _context.SaveChangesAsync();
 
-            // Kirim OTP via email
             await SendOtpEmail(email, otp);
 
             return $"Kode OTP telah dikirim ke {email}. Ketik /verifikasi KODE untuk konfirmasi. Kode berlaku 10 menit.";
@@ -131,7 +153,6 @@ namespace ReceiptExpenseTracker.Controllers
             if (user == null)
                 return "Kamu belum terdaftar. Ketik /daftar email@kamu.com untuk daftar.";
 
-            // Parse pesan sederhana: "beli X di Y Rp Z" atau "X di Y Z"
             var parsed = ParseTransactionMessage(message);
             if (parsed == null)
                 return "Format tidak dikenali. Contoh: beli makan di warung pak indro 20000";
@@ -162,7 +183,6 @@ namespace ReceiptExpenseTracker.Controllers
 
         private ParsedTransaction? ParseTransactionMessage(string message)
         {
-            // Pattern: "beli X di Y 20000" atau "X di Y 20000"
             var pattern = @"(?:beli\s+)?(.+?)\s+di\s+(.+?)\s+([\d.,]+)$";
             var match = System.Text.RegularExpressions.Regex.Match(
                 message, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
